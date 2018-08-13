@@ -1,0 +1,22 @@
+node_modules*
+npm-debug.log
+.vscode
+.project
+**/.DS_Store
+.sass-cache
+dev
+dist*
+mime.types
+src/public/static
+
+# 个人本地资源（用来存放本地静态测试页面，不进行上传）
+src/public/personal
+
+src/node_modules
+src/node_modules.zip
+
+.idea
+uploadFiles
+userupload
+nginx.conf
+access
