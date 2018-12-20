@@ -1,17 +1,19 @@
-var express = require('express');
-var path = require('path');
-var favicon = require('serve-favicon');
-var logger = require('morgan');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
+const express = require('express');
+const path = require('path');
+const favicon = require('serve-favicon');
+const logger = require('morgan');
+const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
 const rp = require('request-promise');
 
 
-var index = require('./routes/index');
-var users = require('./routes/users');
-var live = require('./routes/live');
+const index = require('./routes/index');
+const users = require('./routes/users');
+const live = require('./routes/live');
+const crypto = require('./public/test/hash/crypto');
+const decrypt = require('./public/test/rsa/decrypt');
 
-var app = express();
+const app = express();
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -27,15 +29,18 @@ app.use(bodyParser.urlencoded({
 }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'node_modules')));
 
 app.use('/', index);
 app.use('/users', users);
 app.use('/video/live', live);
+app.use('/crypto', crypto);
+app.use('/rsa', decrypt);
 
 app.use('/api/test', function (req, res) {
   console.log('/api/test');
 
-  var url = 'http://music.migu.cn/music-migu-web/migumusic/user/571622ad-73c8-4507-87d2-44b644b2f7a3/playlists?listType=0&pageSize=50&pageNo=1';
+  let url = 'http://music.migu.cn/music-migu-web/migumusic/user/571622ad-73c8-4507-87d2-44b644b2f7a3/playlists?listType=0&pageSize=50&pageNo=1';
 
   rp({
     method: 'GET',
@@ -52,7 +57,7 @@ app.use('/api/test', function (req, res) {
     timeout: 10000
   }).then(function (response) {
     res.json(response);
-  }).catch(function(err) {
+  }).catch(function (err) {
     console.error(err);
   });
 
@@ -60,7 +65,7 @@ app.use('/api/test', function (req, res) {
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
-  var err = new Error('Not Found');
+  let err = new Error('Not Found');
   err.status = 404;
   next(err);
 });

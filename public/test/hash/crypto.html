@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <form id="J_CryptoForm" action="/crypto/crypto" method="POST">
+        <input id="J_CryptoText" type="text" name="text">
+        <button type="submit">提交</button>
+    </form>
+
+    <script src="/jquery/dist/jquery.js"></script>
+    <script src="/crypto-js/crypto-js.js"></script>
+    <script>
+        document.getElementById('J_CryptoForm').onsubmit = function (e) {
+            e.preventDefault();
+
+            var textInput = document.getElementById('J_CryptoText');
+            var originText = textInput.value;
+            var secretKey = 'heheda';
+
+            // Encrypt
+            textInput.value = CryptoJS.AES.encrypt(originText, secretKey);
+
+            var data = {
+                text: textInput.value, // 密文
+                secretKey: secretKey // 密钥
+            };
+
+            $.ajax({
+                    method: 'POST',
+                    url: '/crypto/crypto',
+                    data: data
+                })
+                .then(function (res) {
+                    document.write(JSON.stringify(res));
+                }, function (err) {
+
+                });
+
+        };
+    </script>
+</body>
+
+</html>
