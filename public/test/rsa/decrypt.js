@@ -1,8 +1,45 @@
 var express = require('express');
 var router = express.Router();
 var NodeRSA = require('node-rsa');
+var CryptoJS = require("crypto-js");
 var fs = require('fs');
 var path = require('path');
+
+// rsa页
+router.get('/', function (req, res, next) {
+    // 读取并加密公钥，并返还给前端页面保存
+    fs.readFile(path.join(__dirname, "./public.pem"), (err, data) => {
+        if (err) {
+            res.status(500).json({
+                success: false
+            });
+            return;
+        }
+
+        // 创建公钥对象
+        var publicKeyString = data.toString();
+        var publicKey = new NodeRSA(publicKeyString);
+        publicKey.setOptions({
+            // 这里需要指定RSA padding模式为pkcs1，这是因为前端jsencrypt库采用了pkcs1，而后端node-rsa默认使用的pkcs1_oaep
+            // https://stackoverflow.com/questions/33837617/node-rsa-errors-when-trying-to-decrypt-message-with-private-key
+            encryptionScheme: 'pkcs1'
+        });
+        
+        publicKeyGap = 'heheda'; // 公钥间隔符
+        publicKeyString = publicKeyString.replace(/\n/g, publicKeyGap);
+
+        var publicKeySec = 'abcdefg'; // 公钥AES加密key
+        var cryptBytes = CryptoJS.AES.encrypt(publicKeyString, publicKeySec); // 加密后的公钥
+
+        var decryptBytes  = CryptoJS.AES.decrypt(cryptBytes.toString(), publicKeySec); // 解密后的公钥
+        var decryptText = decryptBytes.toString(CryptoJS.enc.Utf8); // 解密后的公钥明文
+
+
+        res.render('rsa', {
+            pk: publicKeyGap.length + cryptBytes.toString() + publicKeyGap + publicKeySec + publicKeySec.length
+        });
+    });
+});
 
 router.post('/decrypt', function (req, res, next) {
     var body = req.body;
