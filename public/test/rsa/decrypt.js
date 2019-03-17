@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var NodeRSA = require('node-rsa');
-var CryptoJS = require("crypto-js");
+var CryptoJS = require('crypto-js');
 var fs = require('fs');
 var path = require('path');
 
@@ -42,9 +42,7 @@ router.get('/', function (req, res, next) {
 });
 
 router.post('/decrypt', function (req, res, next) {
-    var body = req.body;
-    console.log(body);
-
+    
     // 读取私钥
     fs.readFile(path.join(__dirname, "./private.pem"), (err, data) => {
         if (err) {
@@ -53,6 +51,9 @@ router.post('/decrypt', function (req, res, next) {
             });
             return;
         }
+
+        var body = req.body;
+        console.log(body);
 
         // 创建私钥对象
         var privateKey = new NodeRSA(data.toString());
@@ -63,7 +64,11 @@ router.post('/decrypt', function (req, res, next) {
         });
 
         // 对数据进行解密
-        var decryptedMsg = privateKey.decrypt(body.msg, 'utf8');
+        // 1. 先进行AES解密（利用客户端传过来的秘钥）
+        var aesBytes = CryptoJS.AES.decrypt(body.msg, body.secKey);
+        var decryptedData = aesBytes.toString(CryptoJS.enc.Utf8);
+        // 2. 再用服务端RSA私钥进行二次解密
+        var decryptedMsg = privateKey.decrypt(decryptedData, 'utf8');
 
         res.json({
             success: true,
