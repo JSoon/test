@@ -4,6 +4,7 @@ var NodeRSA = require('node-rsa');
 var CryptoJS = require('crypto-js');
 var fs = require('fs');
 var path = require('path');
+var xss = require('xss');
 
 // rsa页
 router.get('/', function (req, res, next) {
@@ -53,18 +54,20 @@ router.post('/decrypt', function (req, res, next) {
         // 2. AES随机秘钥解密密文
         var rawData;
         var decryptedBytes = CryptoJS.AES.decrypt(body.data, secKey);
+        var decryptedData = xss(decryptedBytes.toString(CryptoJS.enc.Utf8));
         if (body.dataType == 1) {
             // 解密plain text密文
-            rawData = decryptedBytes.toString(CryptoJS.enc.Utf8);
+            rawData = decryptedData;
         } else if (body.dataType == 2) {
             // 解密json密文
-            rawData = JSON.parse(decryptedBytes.toString(CryptoJS.enc.Utf8));
+            rawData = JSON.parse(decryptedData);
         }
 
         //#endregion
 
         res.json({
             success: true,
+            dataType: body.dataType,
             rawData: rawData
         });
     });

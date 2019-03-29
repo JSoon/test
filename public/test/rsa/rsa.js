@@ -17,8 +17,15 @@ $('#J_EncryptBtn').click(function () {
     }
 
     encryptDataObj = dataEncrypting({
+        // 加密plain text
         raw: msg,
         rawType: 1,
+        // 加密object
+        // raw: {
+        //     a: 1,
+        //     b: 2
+        // },
+        // rawType: 2,
         publicKey: rsaPK
     });
     console.log('encryptDataObj', encryptDataObj);
@@ -82,9 +89,6 @@ function dataEncrypting(opts) {
 
 //#endregion
 
-
-
-
 //#region 服务端解密
 
 $('#J_DecryptBtn').click(function () {
@@ -98,7 +102,11 @@ $('#J_DecryptBtn').click(function () {
             return;
         }
 
-        $('#J_DecryptedMsg').html(res.rawData);
+        if (res.dataType === '1') {
+            $('#J_DecryptedMsg').html(res.rawData);
+        } else if (res.dataType === '2') {
+            $('#J_DecryptedMsg').html(JSON.stringify(res.rawData));
+        }
     }, function () {
 
     });
