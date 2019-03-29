@@ -7,7 +7,7 @@ var path = require('path');
 
 // rsa页
 router.get('/', function (req, res, next) {
-    // 读取并加密公钥，并返还给前端页面保存
+    // 读取公钥，并返还给前端页面保存
     fs.readFile(path.join(__dirname, "./public.pem"), (err, data) => {
         if (err) {
             res.status(500).json({
@@ -16,33 +16,16 @@ router.get('/', function (req, res, next) {
             return;
         }
 
-        // 创建公钥对象
         var publicKeyString = data.toString();
-        var publicKey = new NodeRSA(publicKeyString);
-        publicKey.setOptions({
-            // 这里需要指定RSA padding模式为pkcs1，这是因为前端jsencrypt库采用了pkcs1，而后端node-rsa默认使用的pkcs1_oaep
-            // https://stackoverflow.com/questions/33837617/node-rsa-errors-when-trying-to-decrypt-message-with-private-key
-            encryptionScheme: 'pkcs1'
-        });
-        
-        publicKeyGap = 'heheda'; // 公钥间隔符
-        publicKeyString = publicKeyString.replace(/\n/g, publicKeyGap);
-
-        var publicKeySec = 'abcdefg'; // 公钥AES加密key
-        var cryptBytes = CryptoJS.AES.encrypt(publicKeyString, publicKeySec); // 加密后的公钥
-
-        var decryptBytes  = CryptoJS.AES.decrypt(cryptBytes.toString(), publicKeySec); // 解密后的公钥
-        var decryptText = decryptBytes.toString(CryptoJS.enc.Utf8); // 解密后的公钥明文
-
 
         res.render('rsa', {
-            pk: publicKeyGap.length + cryptBytes.toString() + publicKeyGap + publicKeySec + publicKeySec.length
+            pk: publicKeyString
         });
     });
 });
 
 router.post('/decrypt', function (req, res, next) {
-    
+
     // 读取私钥
     fs.readFile(path.join(__dirname, "./private.pem"), (err, data) => {
         if (err) {
@@ -63,17 +46,26 @@ router.post('/decrypt', function (req, res, next) {
             encryptionScheme: 'pkcs1'
         });
 
-        // 对数据进行解密
-        // 1. 先进行AES解密（利用客户端传过来的秘钥）
-        var aesBytes = CryptoJS.AES.decrypt(body.msg, body.secKey);
-        var decryptedData = aesBytes.toString(CryptoJS.enc.Utf8);
-        // 2. 再用服务端RSA私钥进行二次解密
-        var decryptedMsg = privateKey.decrypt(decryptedData, 'utf8');
+        //#region 数据解密
+
+        // 1. RSA秘钥解密AES随机秘钥
+        var secKey = privateKey.decrypt(body.secKey, 'utf8');
+        // 2. AES随机秘钥解密密文
+        var rawData;
+        var decryptedBytes = CryptoJS.AES.decrypt(body.data, secKey);
+        if (body.dataType == 1) {
+            // 解密plain text密文
+            rawData = decryptedBytes.toString(CryptoJS.enc.Utf8);
+        } else if (body.dataType == 2) {
+            // 解密json密文
+            rawData = JSON.parse(decryptedBytes.toString(CryptoJS.enc.Utf8));
+        }
+
+        //#endregion
 
         res.json({
             success: true,
-            encryptedMsg: body.msg,
-            decryptedMsg: decryptedMsg
+            rawData: rawData
         });
     });
 });

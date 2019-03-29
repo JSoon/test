@@ -1,18 +1,19 @@
-p 加密后公钥：
+p RSA公钥：
 input#J_PublicKey(
     type="text"
     value=pk
     readonly
+    disabled
     )
-div 加密前数据：
+div 明文：
 input(id="J_Msg" type="text")
 div
     button(id="J_EncryptBtn" type="button") 客户端加密
     button(id="J_DecryptBtn" type="button") 服务端解密
 hr
-p 加密后数据：
+p 密文：
 div(id="J_EncryptedMsg" class="encrypted-msg")
-p 解密后后数据：
+p 服务端解密后明文：
 div(id="J_DecryptedMsg" class="decrypted-msg")
 
 link(rel="stylesheet", href="/test/rsa/rsa.css")

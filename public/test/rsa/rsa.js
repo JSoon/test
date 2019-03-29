@@ -1,62 +1,89 @@
 //#region 解析公钥
 
-var pk = $('#J_PublicKey').val();
-// 1. 去掉公钥加密key
-var pkSecKeyL = pk.slice(-1); // 公钥加密key长度
-pk = pk.slice(0, -1); // 去掉公钥加密key长度字段
-var pkSecKey = pk.slice(-pkSecKeyL); // 公钥间加密key
-pk = pk.slice(0, -pkSecKeyL); // 去掉公钥加密key
-// 2. 去掉公钥间隔符
-var pkGapL = pk.slice(0, 1); // 公钥间隔符长度
-pk = pk.slice(1); // 去掉公钥间隔符长度字段
-var pkGap = pk.slice(-pkGapL); // 公钥间隔符
-pk = pk.slice(0, -pkGapL); // 去掉公钥间隔符，得到加密后的公钥
-
-// 解密公钥
-var decryptBytes = CryptoJS.AES.decrypt(pk, pkSecKey); // 解密后的公钥
-var decryptText = decryptBytes.toString(CryptoJS.enc.Utf8); // 解密后的公钥明文
-console.log(pkGap);
-var publicKey = decryptText.replace(new RegExp(pkGap, 'g'), '\n'); // 还原公匙
-console.log(publicKey);
+var rsaPK = $('#J_PublicKey').val();
+console.log('rsaPK', rsaPK);
 
 //#endregion
 
 //#region 客户端加密
 
-var aesSecKey;
-
-// 生成随机AES秘钥
-function generateAESKey() {
-    var p = Math.random() * 1000;
-    return CryptoJS.SHA256(p).toString();
-}
+var encryptDataObj; // 加密传输数据对象
 
 $('#J_EncryptBtn').click(function () {
-
-    // 1. RSA一次加密
-    // 使用公匙对明文进行加密
-    var encrypt = new JSEncrypt();
-    // var publicKey = $.trim($('#J_PublicKey').val());
 
     var msg = $.trim($('#J_Msg').val());
     if (!msg) {
         return;
     }
-    // msg = encodeURI(msg);
 
-    encrypt.setPublicKey(publicKey);
-    var encryptedMsg = encrypt.encrypt(msg);
-
-    // 2. AES二次加密
-    aesSecKey = generateAESKey();
-    encryptedMsg = CryptoJS.AES.encrypt(encryptedMsg, aesSecKey).toString();
+    encryptDataObj = dataEncrypting({
+        raw: msg,
+        rawType: 1,
+        publicKey: rsaPK
+    });
+    console.log('encryptDataObj', encryptDataObj);
 
     // 显示密文
-    $('#J_EncryptedMsg').html(encryptedMsg);
+    $('#J_EncryptedMsg').html(encryptDataObj.data);
 
 });
 
+/**
+ * @description 生成随机AES秘钥
+ * 
+ * @returns 随机秘钥串
+ */
+function generateAESKey() {
+    var p = Math.random() * 1000;
+    return CryptoJS.SHA256(p).toString();
+}
+
+/**
+ * @description 数据加密，步骤如下
+ * 
+ * 1. 生成一串随机秘钥k1
+ * 2. AES加密明文，key为k1
+ * 3. RSA公匙加密k1
+ * 
+ * @param {object} opts 
+ * @param {string} opts.raw         明文串
+ * @param {number} opts.rawType     明文数据类型，1：plain text，2：object
+ * @param {string} opts.publicKey   RSA公匙
+ * 
+ * @returns 加密传输数据对象
+ */
+function dataEncrypting(opts) {
+
+    var rawData; // 明文
+
+    // 处理明文
+    if (opts.rawType === 1) {
+        rawData = opts.raw;
+    } else if (opts.rawType === 2) {
+        rawData = JSON.stringify(opts.raw);
+    }
+
+    // 创建RSA加密对象
+    var RSAEncrypt = new JSEncrypt();
+    RSAEncrypt.setPublicKey(opts.publicKey);
+
+    var ranSecKey = generateAESKey(); // 随机秘钥
+    var encodedData = CryptoJS.AES.encrypt(rawData, ranSecKey).toString(); // 随机秘钥AES加密明文
+    var encodedSecKey = RSAEncrypt.encrypt(ranSecKey); // RSA公钥加密随机秘钥
+
+    // 返回密文等相关传输数据
+    return {
+        dataType: opts.rawType,
+        data: encodedData,
+        secKey: encodedSecKey
+    };
+
+}
+
 //#endregion
+
+
+
 
 //#region 服务端解密
 
@@ -65,16 +92,13 @@ $('#J_DecryptBtn').click(function () {
     $.ajax({
         method: 'POST',
         url: '/rsa/decrypt',
-        data: {
-            secKey: aesSecKey, // AES秘钥
-            msg: $('#J_EncryptedMsg').html() // 二次加密后的密文
-        }
+        data: encryptDataObj
     }).then(function (res) {
         if (!res || !res.success) {
             return;
         }
 
-        $('#J_DecryptedMsg').html(res.decryptedMsg);
+        $('#J_DecryptedMsg').html(res.rawData);
     }, function () {
 
     });
